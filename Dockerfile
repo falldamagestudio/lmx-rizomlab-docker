@@ -18,12 +18,16 @@ RUN mkdir install \
     && wget https://www.rizom-lab.com/floating_tools/linux/lmx-enduser-tools_linux_x64.tar \
     && tar -xvf lmx-enduser-tools_linux_x64.tar \
     && printf "\ny\nn\nn\n" | ./lmx-enduser-tools_linux_x64.sh -- -e accept -l /install/liblmxvendor.so -i /usr/lmxserver -u lmxserver \
-    && cat /var/log/lmx_serv_installation.log \
-    && service --status-all
+    && mkdir /logs \
+    && chown $USER_ID:$USER_GID /logs \
+    && mkdir /config \
+    && chown $USER_ID:$USER_GID /config \
+    && mv /usr/lmxserver/lmx-serv.cfg /config \
+    && ln -s /config/lmx-serv.cfg /usr/lmxserver/lmx-serv.cfg
 
 EXPOSE 6200/udp
 EXPOSE 6200/tcp
 
 USER ${USER}
 
-ENTRYPOINT [ "/usr/lmxserver/lmx-serv", "-lf", "/usr/lmxserver/lmx-serv.log" ]
+ENTRYPOINT [ "/usr/lmxserver/lmx-serv", "-lf", "/logs/lmx-serv.log" ]
