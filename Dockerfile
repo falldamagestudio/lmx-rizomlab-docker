@@ -30,4 +30,4 @@ EXPOSE 6200/tcp
 
 USER ${USER}
 
-ENTRYPOINT [ "/usr/lmxserver/lmx-serv", "-lf", "/logs/lmx-serv.log" ]
+ENTRYPOINT [ "/usr/lmxserver/lmx-serv", "-logfile", "/logs/lmx-serv.log", "-licpath", "/config/license.lic" ]
