@@ -34,20 +34,29 @@ RUN groupadd --gid "${USER_GID}" "${USER}" && \
       --shell /bin/bash \
       ${USER}
 
-WORKDIR /usr/lmxserver
+# Add Tini
+ENV TINI_VERSION v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
+ENTRYPOINT ["/tini", "--"]
 
-COPY --from=builder /usr/lmxserver .
+# Add LM-X server application
+COPY --from=builder /usr/lmxserver /usr/lmxserver
 
+# Map logs to a separate folder
 RUN mkdir /logs \
-    && chown $USER_ID:$USER_GID /logs \
-    && mkdir /config \
+    && chown $USER_ID:$USER_GID /logs
+
+# Map config file to a separate folder
+RUN mkdir /config \
     && chown $USER_ID:$USER_GID /config \
     && mv /usr/lmxserver/lmx-serv.cfg /config \
     && ln -s /config/lmx-serv.cfg /usr/lmxserver/lmx-serv.cfg
 
+# LM-X server communicates over port 6200, TCP+UDP
 EXPOSE 6200/udp
 EXPOSE 6200/tcp
 
 USER ${USER}
 
-ENTRYPOINT [ "/usr/lmxserver/lmx-serv", "-logfile", "/logs/lmx-serv.log", "-licpath", "/config/license.lic" ]
+CMD [ "/usr/lmxserver/lmx-serv", "-logfile", "/logs/lmx-serv.log", "-licpath", "/config/license.lic" ]
