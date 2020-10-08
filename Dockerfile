@@ -1,4 +1,4 @@
-FROM ubuntu AS builder
+FROM ubuntu:20.04 AS builder
 
 ENV USER=lmxserver USER_ID=1000 USER_GID=1000
 
@@ -22,7 +22,7 @@ RUN printf "\ny\nn\nn\n" | ./lmx-enduser-tools_linux_x64.sh -- -e accept -l /ins
 
 #####################################################################################
 
-FROM ubuntu
+FROM ubuntu:20.04
 
 ENV USER=lmxserver USER_ID=1000 USER_GID=1000
 
