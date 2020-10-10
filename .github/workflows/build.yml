@@ -24,7 +24,6 @@ jobs:
         run: if [[ "${GITHUB_REF}" =~ ^refs/tags/.* ]]; then echo ::set-output name=tag::${GITHUB_REF#refs/tags/}; else echo ::set-output name=tag::latest; fi
 
       - name: Build and push minimal version
-        id: docker_build
         uses: docker/build-push-action@v2
         with:
           push: true
@@ -32,13 +31,9 @@ jobs:
           tags: falldamage/lmx-rizomlab:${{steps.tag_name.outputs.tag }}-minimal
 
       - name: Build and push regular version
-        id: docker_build
         uses: docker/build-push-action@v2
         with:
           push: true
           target: regular
           tags: falldamage/lmx-rizomlab:${{steps.tag_name.outputs.tag }}-regular
-
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
 
