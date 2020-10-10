@@ -12,6 +12,7 @@ RUN groupadd --gid "${USER_GID}" "${USER}" && \
 
 RUN apt-get update && apt-get -y install wget perl sudo
 
+# Install LM-X server + Rizom Lab vendor plugin
 WORKDIR /install
 
 RUN wget https://www.rizom-lab.com/floating_tools/linux/liblmxvendor.so \
@@ -20,9 +21,82 @@ RUN wget https://www.rizom-lab.com/floating_tools/linux/liblmxvendor.so \
 
 RUN printf "\ny\nn\nn\n" | ./lmx-enduser-tools_linux_x64.sh -- -e accept -l /install/liblmxvendor.so -i /usr/lmxserver -u lmxserver
 
-#####################################################################################
+RUN rm /usr/lmxserver/*.jar \
+    && rm /usr/lmxserver/lmxendutil
 
-FROM ubuntu:20.04
+# Map logs to a separate folder
+RUN mkdir /logs \
+    && chown $USER_ID:$USER_GID /logs
+
+# Map config files to a separate folder
+RUN mkdir /config \
+    && chown $USER_ID:$USER_GID /config \
+    && mv /usr/lmxserver/lmx-serv.cfg /config \
+    && ln -s /config/lmx-serv.cfg /usr/lmxserver/lmx-serv.cfg
+
+# Add Tini
+ENV TINI_VERSION v0.19.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
+
+
+# Prepare minimal-specific folders
+
+RUN mkdir -p /minimal
+
+# Setup an empty temp folder
+RUN mkdir -p /minimal/var/tmp && chmod 755 /minimal/var && chmod 1777 /minimal/var/tmp
+
+# Extract all license server dependencies
+RUN ldd /usr/lmxserver/lmx-serv | tr -s '[:blank:]' '\n' | grep '^/' | \
+    xargs -I % sh -c 'mkdir -p $(dirname /minimal%); cp -p % /minimal%;'
+
+# Extract only necessary LM-X license server files from installation
+RUN mkdir -p /minimal/usr/lmxserver \
+    && chown lmxserver /minimal/usr/lmxserver \
+    && cp -p /usr/lmxserver/lmx-serv /minimal/usr/lmxserver \
+    && cp -p /usr/lmxserver/lmx-serv.cfg /minimal/usr/lmxserver
+
+# Include lmxserver user & group
+RUN mkdir -p /minimal/etc \
+    && chmod ugo+r /minimal/etc \
+    && cp -p /etc/passwd /minimal/etc/passwd \
+    && cp -p /etc/group /minimal/etc/group
+
+#########################################################################
+
+FROM scratch AS minimal
+
+ENV USER=lmxserver
+
+USER ${USER}
+
+# Add Tini
+COPY --from=builder /tini /tini
+ENTRYPOINT ["/tini", "--"]
+
+# Add minimal-specific folders:
+#   LM-X server
+#   dependencies
+#   etc/passwd, /etc/group
+#   /var/tmp
+COPY --from=builder /minimal /
+
+# Map logs to a separate folder
+COPY --from=builder --chown=lmxserver /logs /logs
+
+# Map config files to a separate folder
+COPY --from=builder --chown=lmxserver /config /config
+
+# LM-X server communicates over port 6200, TCP+UDP
+EXPOSE 6200/udp
+EXPOSE 6200/tcp
+
+CMD [ "/usr/lmxserver/lmx-serv", "-logfile", "/logs/lmx-serv.log", "-licpath", "/config/license.lic" ]
+
+###########################################################################
+
+FROM ubuntu:20.04 AS regular
 
 ENV USER=lmxserver USER_ID=1000 USER_GID=1000
 
