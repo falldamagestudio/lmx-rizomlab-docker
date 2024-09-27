@@ -34,12 +34,6 @@ RUN mkdir /config \
     && mv /usr/lmxserver/lmx-serv.cfg /config \
     && ln -s /config/lmx-serv.cfg /usr/lmxserver/lmx-serv.cfg
 
-# Add Tini
-ENV TINI_VERSION v0.19.0
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
-RUN chmod +x /tini
-
-
 # Prepare minimal-specific folders
 
 RUN mkdir -p /minimal
@@ -71,10 +65,6 @@ ENV USER=lmxserver
 
 USER ${USER}
 
-# Add Tini
-COPY --from=builder /tini /tini
-ENTRYPOINT ["/tini", "--"]
-
 # Add minimal-specific folders:
 #   LM-X server
 #   dependencies
@@ -92,7 +82,8 @@ COPY --from=builder --chown=lmxserver /config /config
 EXPOSE 6200/udp
 EXPOSE 6200/tcp
 
-CMD [ "/usr/lmxserver/lmx-serv", "-logfile", "/logs/lmx-serv.log", "-licpath", "/config/license.lic" ]
+ENTRYPOINT [ "/usr/lmxserver/lmx-serv" ]
+CMD [ "-logfile", "/logs/lmx-serv.log", "-licpath", "/config/license.lic" ]
 
 ###########################################################################
 
@@ -107,12 +98,6 @@ RUN groupadd --gid "${USER_GID}" "${USER}" && \
       --create-home \
       --shell /bin/bash \
       ${USER}
-
-# Add Tini
-ENV TINI_VERSION v0.19.0
-ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
-RUN chmod +x /tini
-ENTRYPOINT ["/tini", "--"]
 
 # Add LM-X server application
 COPY --from=builder /usr/lmxserver /usr/lmxserver
@@ -133,4 +118,6 @@ EXPOSE 6200/tcp
 
 USER ${USER}
 
-CMD [ "/usr/lmxserver/lmx-serv", "-logfile", "/logs/lmx-serv.log", "-licpath", "/config/license.lic" ]
+ENTRYPOINT [ "/usr/lmxserver/lmx-serv" ]
+CMD [ "-logfile", "/logs/lmx-serv.log", "-licpath", "/config/license.lic" ]
+
