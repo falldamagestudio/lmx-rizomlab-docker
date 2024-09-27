@@ -1,4 +1,4 @@
-FROM ubuntu:20.04 AS builder
+FROM ubuntu:22.04 AS builder
 
 ENV USER=lmxserver USER_ID=1000 USER_GID=1000
 
@@ -78,11 +78,15 @@ COPY --from=builder --chown=lmxserver /logs /logs
 # Map config files to a separate folder
 COPY --from=builder --chown=lmxserver /config /config
 
+# Include 'stdbuf' utility
+COPY --from=builder --chown=lmxserver /usr/bin/stdbuf /usr/bin/stdbuf
+COPY --from=builder --chown=lmxserver /usr/libexec/coreutils/libstdbuf.so /usr/libexec/coreutils/libstdbuf.so
+
 # LM-X server communicates over port 6200, TCP+UDP
 EXPOSE 6200/udp
 EXPOSE 6200/tcp
 
-ENTRYPOINT [ "/usr/lmxserver/lmx-serv" ]
+ENTRYPOINT [ "stdbuf", "--output=L", "/usr/lmxserver/lmx-serv" ]
 CMD [ "-logfile", "/logs/lmx-serv.log", "-licpath", "/config/license.lic" ]
 
 ###########################################################################
@@ -118,6 +122,6 @@ EXPOSE 6200/tcp
 
 USER ${USER}
 
-ENTRYPOINT [ "/usr/lmxserver/lmx-serv" ]
+ENTRYPOINT [ "stdbuf", "--output=L", "/usr/lmxserver/lmx-serv" ]
 CMD [ "-logfile", "/logs/lmx-serv.log", "-licpath", "/config/license.lic" ]
 
